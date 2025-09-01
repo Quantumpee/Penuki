@@ -27,11 +27,7 @@
                 radial-gradient(1200px 600px at 110% -20%, var(--bg2), transparent 60%),
                 linear-gradient(180deg,#fff, #fff9);
   }
-  .wrap{
-    display:grid;
-    grid-template-rows: auto 1fr auto;
-    min-height:100%;
-  }
+  .wrap{ display:grid; grid-template-rows:auto 1fr auto; min-height:100%; }
 
   /* HUD */
   .hud{
@@ -41,30 +37,34 @@
     border-bottom:1px solid #00000010;
     backdrop-filter:saturate(1.1) blur(6px);
   }
-  .title-row{
-    display:flex; align-items:center; gap:12px; flex-wrap:wrap;
-  }
-  .logo{
-    display:inline-grid; place-items:center;
-    width:42px; height:42px; border-radius:14px;
+  .title-row{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .logo{ display:inline-grid; place-items:center; width:42px; height:42px; border-radius:14px;
     background: conic-gradient(from 180deg, var(--accent), var(--accent-2), var(--accent-3), var(--accent));
-    box-shadow: var(--shadow);
-    color:#fff; font-size:22px; font-weight:900;
-  }
+    box-shadow: var(--shadow); color:#fff; font-size:22px; font-weight:900; }
   h1{ font-size: clamp(20px, 3vw, 28px); margin:0 }
   .sub{opacity:.7; font-weight:600; font-size:.9rem}
 
+  /* SCORES: auto-wrap grid so it never overlaps */
   .scores{
-    margin-top:10px;
-    display:grid; gap:10px;
-    grid-template-columns: repeat(4, minmax(0,1fr));
+    margin-top:10px; display:grid; gap:10px;
+    /* Key line: auto-fit with a sensible min size so we wrap to 2 rows on phones */
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   }
+  /* Ultra-narrow phones: shrink cards a bit more */
+  @media (max-width: 360px){
+    .scores{ grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap:8px; }
+    .card{ padding:8px 10px; }
+  }
+  /* Compact mode: hide words, keep emoji + number so we stay one line if needed */
+  @media (max-width: 330px){
+    .tag{ gap:4px; }
+    .tag::after{ content:""; } /* no extra text */
+    .tag .label{ display:none; } /* hide the label text */
+  }
+
   .card{
-    background:var(--panel);
-    border-radius:14px;
-    box-shadow: var(--shadow);
-    padding:10px 12px;
-    display:grid; gap:6px;
+    background:var(--panel); border-radius:14px; box-shadow: var(--shadow);
+    padding:10px 12px; display:grid; gap:6px;
   }
   .card .row{ display:flex; align-items:center; gap:8px; justify-content:space-between }
   .tag{
@@ -73,44 +73,25 @@
   }
   .tag .em{font-size:1.1rem}
   .num{ font-weight:800; min-width:2ch; text-align:right; }
-  .bar{
-    height:10px; background:#0000000f; border-radius:999px; overflow:hidden;
-    position:relative;
-  }
-  .fill{
-    --p: 1;
-    width:calc(var(--p)*1%); height:100%;
-    background: linear-gradient(90deg, var(--accent), var(--accent-2));
-    border-radius:inherit;
-    transition: width .25s ease;
-  }
+  .bar{ height:10px; background:#0000000f; border-radius:999px; overflow:hidden; position:relative; }
+  .fill{ --p: 1; width:calc(var(--p)*1%); height:100%; border-radius:inherit; transition: width .25s ease; }
   .fill.feed { background: linear-gradient(90deg, #ff99c2, #ff6b9e); }
   .fill.play { background: linear-gradient(90deg, #7ee0ff, #43b5ff); }
   .fill.pet  { background: linear-gradient(90deg, #ffd66b, #ff9f1a); }
   .fill.avg  { background: linear-gradient(90deg, #4cc780, #43dd99); }
 
   /* Stage */
-  .stage{
-    position:relative;
-    display:grid; place-items:center;
-    padding:10px clamp(12px,2vw,24px);
-  }
+  .stage{ position:relative; display:grid; place-items:center; padding:10px clamp(12px,2vw,24px); }
   .stage-inner{
-    width:min(1100px, 96vw);
-    aspect-ratio: 16/9;
+    width:min(1100px, 96vw); aspect-ratio:16/9;
     background: radial-gradient(60% 70% at 50% 15%, #ffffff, #fff6),
                 linear-gradient(180deg, #d7f7ff 0 60%, #c7f3c9 60% 100%);
-    border-radius:22px; overflow:hidden; box-shadow: var(--shadow);
-    position:relative;
+    border-radius:22px; overflow:hidden; box-shadow: var(--shadow); position:relative;
   }
-  .moodTint{
-    position:absolute; inset:0; pointer-events:none; mix-blend-mode:multiply; opacity:.0;
+  .moodTint{ position:absolute; inset:0; pointer-events:none; mix-blend-mode:multiply; opacity:.0;
     background: radial-gradient(120% 100% at 50% -20%, transparent 50%, rgba(255,0,0,.12));
-    transition: opacity .4s ease;
-  }
-  .puppy-wrap{
-    position:absolute; inset:0; display:grid; place-items:center; padding-top:min(5vh,30px);
-  }
+    transition: opacity .4s ease; }
+  .puppy-wrap{ position:absolute; inset:0; display:grid; place-items:center; padding-top:min(5vh,30px); }
   svg{ max-width:100%; height:auto; display:block }
 
   /* Puppy animations */
@@ -120,20 +101,14 @@
 
   /* Controls */
   .controls{
-    position:relative;
-    padding:18px clamp(12px,2vw,24px) 28px;
+    position:relative; padding:18px clamp(12px,2vw,24px) 28px;
     background: linear-gradient(180deg, #ffffff, #fff8);
-    border-top:1px solid #00000010;
-    display:grid; gap:14px;
+    border-top:1px solid #00000010; display:grid; gap:14px;
     overscroll-behavior: contain; /* keep scroll from stealing drags */
   }
-  .pad-grid{
-    display:grid; gap:14px;
-    grid-template-columns: repeat(3, minmax(0,1fr));
-  }
+  .pad-grid{ display:grid; gap:14px; grid-template-columns: repeat(3, minmax(0,1fr)); }
   .pad{
-    background:var(--panel); border-radius:18px; padding:12px;
-    box-shadow: var(--shadow);
+    background:var(--panel); border-radius:18px; padding:12px; box-shadow: var(--shadow);
     display:grid; gap:10px; align-content:start; position:relative; overflow:visible;
   }
   .pad h3 { margin:0; font-size:1rem; display:flex; align-items:center; gap:8px }
@@ -150,9 +125,9 @@
   .returning{ transition: transform .5s cubic-bezier(.16,1,.3,1); }
   .float{ position:absolute; left:0; top:0; will-change:transform }
 
-  /* While dragging, move the bowl in the viewport coordinate space */
+  /* Follow-finger mode used for mobile drag */
   .bowl.drag-follow {
-    position: fixed !important; /* follow finger reliably on mobile */
+    position: fixed !important;
     left: 0; top: 0;
     transform: translate(0,0) !important;
     z-index: 10000;
@@ -165,13 +140,10 @@
     transition: transform .2s ease;
   }
 
-  /* Reduced motion */
   @media (prefers-reduced-motion: reduce){
     .wag{ animation-duration: 1.6s }
     .returning{ transition-duration:.2s }
   }
-
-  /* Accessibility helpers */
   .sr-only{
     position:absolute!important; width:1px!important; height:1px!important; padding:0!important; margin:-1px!important; overflow:hidden!important; clip:rect(0,0,0,0)!important; white-space:nowrap!important; border:0!important;
   }
@@ -185,21 +157,35 @@
       <h1>Penuki</h1>
       <div class="sub">Keep the puppy happy: feed, play, and pet!</div>
     </div>
+
+    <!-- Scores auto-wrap; words auto-hide on very narrow phones -->
     <div class="scores" aria-live="polite">
       <div class="card" id="score-feed" aria-label="Feed score">
-        <div class="row"><span class="tag"><span class="em">🍪</span> Feed</span><span class="num">10</span></div>
+        <div class="row">
+          <span class="tag"><span class="em">🍪</span><span class="label"> Feed</span></span>
+          <span class="num">10</span>
+        </div>
         <div class="bar" aria-hidden="true"><div class="fill feed" style="--p:100"></div></div>
       </div>
       <div class="card" id="score-play" aria-label="Play score">
-        <div class="row"><span class="tag"><span class="em">🎾</span> Play</span><span class="num">10</span></div>
+        <div class="row">
+          <span class="tag"><span class="em">🎾</span><span class="label"> Play</span></span>
+          <span class="num">10</span>
+        </div>
         <div class="bar" aria-hidden="true"><div class="fill play" style="--p:100"></div></div>
       </div>
       <div class="card" id="score-pet" aria-label="Pet score">
-        <div class="row"><span class="tag"><span class="em">💖</span> Pet</span><span class="num">10</span></div>
+        <div class="row">
+          <span class="tag"><span class="em">💖</span><span class="label"> Pet</span></span>
+          <span class="num">10</span>
+        </div>
         <div class="bar" aria-hidden="true"><div class="fill pet" style="--p:100"></div></div>
       </div>
       <div class="card" id="score-avg" aria-label="Happiness score">
-        <div class="row"><span class="tag"><span class="em">😊</span> Happy</span><span class="num">10</span></div>
+        <div class="row">
+          <span class="tag"><span class="em">😊</span><span class="label"> Happy</span></span>
+          <span class="num">10</span>
+        </div>
         <div class="bar" aria-hidden="true"><div class="fill avg" style="--p:100"></div></div>
       </div>
     </div>
@@ -209,12 +195,11 @@
     <div class="stage-inner" id="stage">
       <div class="moodTint" id="moodTint"></div>
       <div class="puppy-wrap">
-        <!-- Cute SVG Puppy (expressions controlled via classes) -->
+        <!-- Cute SVG Puppy -->
         <svg id="puppySVG" viewBox="0 0 400 260" aria-labelledby="puppyTitle puppyDesc" role="img">
           <title id="puppyTitle">Penuki the puppy</title>
           <desc id="puppyDesc">A cute cartoon puppy whose expression changes with happiness.</desc>
 
-          <!-- Background props -->
           <defs>
             <radialGradient id="fur" cx="50%" cy="40%" r="70%">
               <stop offset="0%" stop-color="#fff4e6"/>
@@ -227,14 +212,16 @@
             <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
               <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity=".25"/>
             </filter>
-            <clipPath id="headClip"><circle cx="200" cy="120" r="80"/></clipPath>
           </defs>
 
           <!-- Ground shadow -->
           <ellipse cx="200" cy="240" rx="90" ry="15" fill="#00000010"/>
 
-          <!-- Tail -->
-          <g class="tail wag" style="--wag:.9s" transform="translate(280,164)">
+          <!-- TAIL (moved & attached to body edge) -->
+          <g class="tail wag" style="--wag:.9s" transform="translate(295,188)">
+            <!-- base that overlaps the body so it looks connected -->
+            <circle cx="0" cy="0" r="9" fill="url(#ear)"/>
+            <!-- tail -->
             <rect x="0" y="-6" width="60" height="12" rx="6" fill="#b67f56"/>
             <circle cx="60" cy="0" r="8" fill="#b67f56"/>
           </g>
@@ -276,18 +263,15 @@
 
             <!-- Mouth variants -->
             <g id="mouth">
-              <!-- happy -->
               <path id="mouth-happy" d="M170,148 Q200,168 230,148" stroke="#2b1d1b" stroke-width="5" fill="none" stroke-linecap="round" />
-              <!-- neutral -->
               <path id="mouth-neutral" d="M170,152 Q200,152 230,152" stroke="#2b1d1b" stroke-width="5" fill="none" stroke-linecap="round" opacity="0"/>
-              <!-- sad -->
               <path id="mouth-sad" d="M170,160 Q200,140 230,160" stroke="#2b1d1b" stroke-width="5" fill="none" stroke-linecap="round" opacity="0"/>
             </g>
 
-            <!-- Tongue (visible briefly while eating / happy) -->
+            <!-- Tongue -->
             <path id="tongue" d="M196,154 q4,18 8,0" stroke="none" fill="#ff7e8a" opacity="0"/>
 
-            <!-- Target area for interactions (invisible) -->
+            <!-- Interaction target -->
             <circle id="hitTarget" cx="200" cy="145" r="40" fill="transparent" />
           </g>
         </svg>
@@ -311,14 +295,12 @@
                   <stop offset="100%" stop-color="#ff6b9e"/>
                 </linearGradient>
               </defs>
-              <!-- treats -->
               <g>
                 <circle cx="40" cy="20" r="10" fill="#d49a6a"/>
                 <circle cx="60" cy="18" r="9"  fill="#c9895a"/>
                 <circle cx="80" cy="22" r="11" fill="#d49a6a"/>
                 <circle cx="100" cy="18" r="9" fill="#c9895a"/>
               </g>
-              <!-- bowl -->
               <ellipse cx="70" cy="65" rx="58" ry="20" fill="#00000018"/>
               <path d="M20,40 h100 a6,6 0 0 1 6,6 v20 a24,24 0 0 1 -24,24 h-64 a24,24 0 0 1 -24,-24 v-20 a6,6 0 0 1 6,-6z" fill="url(#bgrad)"/>
               <ellipse cx="70" cy="42" rx="50" ry="12" fill="#ffc2da" stroke="#ff7bb2" stroke-width="3"/>
@@ -411,13 +393,12 @@
     set('feed', scores.feed);
     set('play', scores.play);
     set('pet',  scores.pet);
-
     const avg = Math.round((scores.feed + scores.play + scores.pet)/3);
     set('avg', avg);
     applyMood(avg/10);
   }
 
-  function applyMood(m){ // m: 0..1
+  function applyMood(m){
     if(m>0.66){
       els.mouthHappy.setAttribute('opacity','1');
       els.mouthNeutral.setAttribute('opacity','0');
@@ -457,7 +438,7 @@
   }
 
   function scheduleDecay(key){
-    const delay = rand(1000,10000); // 1 - 10 seconds
+    const delay = rand(1000,10000);
     setTimeout(()=>{
       if(scores[key] > 0){
         scores[key] -= 1;
@@ -481,30 +462,25 @@
     woofTimer = setTimeout(()=>{ els.woof.style.transform='scale(0) rotate(-8deg)'; }, 600);
   }
 
-  // Utility for coords + scroll-safe preventDefault
-  const getXY = (e) => {
-    if (e.touches && e.touches.length) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    return { x: e.clientX, y: e.clientY };
-  };
-  const safePrevent = (e) => {
-    // only prevent if it can be prevented (iOS passive listeners)
-    if (e && e.cancelable) e.preventDefault();
-  };
+  // Coords utilities
+  const getXY = (e) => (e.touches && e.touches.length)
+    ? { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    : { x: e.clientX, y: e.clientY };
+  const safePrevent = (e) => { if (e && e.cancelable) e.preventDefault(); };
 
-  // --- FEED (drag bowl) --- robust mobile version
+  // FEED: robust mobile drag
   (function initBowl(){
     const bowl = els.bowl;
     const hit = els.hit;
     const homeTransform = 'translate(0px, 0px)';
     let dragging = false;
-    let startOffset = {x:0,y:0}; // where inside the bowl the finger is
-    let startXY = {x:0,y:0};     // to detect tap vs drag
+    let startOffset = {x:0,y:0};
+    let startXY = {x:0,y:0};
 
     function placeAtViewport(x, y){
       bowl.style.left = (x - startOffset.x) + 'px';
       bowl.style.top  = (y - startOffset.y) + 'px';
     }
-
     function beginDrag(e){
       dragging = true;
       bowl.classList.add('dragging','drag-follow');
@@ -516,23 +492,11 @@
       startXY = {x:p.x, y:p.y};
       placeAtViewport(p.x, p.y);
     }
-
-    function moveDrag(e){
-      if(!dragging) return;
-      safePrevent(e); // stop page from scrolling
-      const p = getXY(e);
-      placeAtViewport(p.x, p.y);
-    }
-
+    function moveDrag(e){ if(!dragging) return; safePrevent(e); const p=getXY(e); placeAtViewport(p.x,p.y); }
     function overPuppy(){
-      const bowlRect = bowl.getBoundingClientRect();
-      const targetRect = hit.getBoundingClientRect();
-      return !(bowlRect.right < targetRect.left ||
-               bowlRect.left  > targetRect.right ||
-               bowlRect.bottom< targetRect.top ||
-               bowlRect.top   > targetRect.bottom);
+      const a=bowl.getBoundingClientRect(), b=hit.getBoundingClientRect();
+      return !(a.right<b.left || a.left>b.right || a.bottom<b.top || a.top>b.bottom);
     }
-
     function endDrag(e){
       const p = getXY(e);
       const dist = Math.hypot(p.x - startXY.x, p.y - startXY.y);
@@ -541,60 +505,39 @@
       bowl.classList.remove('drag-follow','dragging');
       dragging = false;
 
-      if (overPuppy() || quickTap){
-        bumpScore('feed',2); flashTongue();
-      }
-      // snap home
+      if (overPuppy() || quickTap){ bumpScore('feed',2); flashTongue(); }
       bowl.classList.add('returning');
-      bowl.style.left = ''; bowl.style.top = '';
-      bowl.style.transform = homeTransform;
+      bowl.style.left=''; bowl.style.top=''; bowl.style.transform=homeTransform;
       setTimeout(()=>bowl.classList.remove('returning'), 520);
     }
 
-    // Pointer Events path
-    const hasPointer = 'PointerEvent' in window;
-    if (hasPointer){
-      const onPointerDown = (e)=>{ if(e.button!==0 && e.pointerType!=='touch') return; safePrevent(e); try{ bowl.setPointerCapture(e.pointerId); }catch{} beginDrag(e); };
-      const onPointerMove = (e)=>{ moveDrag(e); };
-      const onPointerUp   = (e)=>{ try{ bowl.releasePointerCapture(e.pointerId); }catch{} endDrag(e); };
-
-      bowl.addEventListener('pointerdown', onPointerDown, {passive:false});
-      window.addEventListener('pointermove', onPointerMove, {passive:false});
-      window.addEventListener('pointerup',   onPointerUp,   {passive:false});
-      window.addEventListener('pointercancel', onPointerUp, {passive:false});
-    } else {
-      // Touch fallback (older iOS/embedded browsers)
-      const onTouchStart = (e)=>{ safePrevent(e); beginDrag(e); };
-      const onTouchMove  = (e)=>{ moveDrag(e); };
-      const onTouchEnd   = (e)=>{ endDrag(e); };
-
-      bowl.addEventListener('touchstart', onTouchStart, {passive:false});
-      window.addEventListener('touchmove', onTouchMove, {passive:false});
-      window.addEventListener('touchend', onTouchEnd, {passive:false});
-      window.addEventListener('touchcancel', onTouchEnd, {passive:false});
+    if ('PointerEvent' in window){
+      bowl.addEventListener('pointerdown', (e)=>{ if(e.button!==0 && e.pointerType!=='touch') return; safePrevent(e); try{ bowl.setPointerCapture(e.pointerId); }catch{} beginDrag(e); }, {passive:false});
+      window.addEventListener('pointermove', (e)=>moveDrag(e), {passive:false});
+      window.addEventListener('pointerup',   (e)=>{ try{ bowl.releasePointerCapture(e.pointerId); }catch{} endDrag(e); }, {passive:false});
+      window.addEventListener('pointercancel',(e)=>endDrag(e), {passive:false});
+    }else{
+      bowl.addEventListener('touchstart', (e)=>{ safePrevent(e); beginDrag(e); }, {passive:false});
+      window.addEventListener('touchmove',  (e)=>moveDrag(e), {passive:false});
+      window.addEventListener('touchend',   (e)=>endDrag(e), {passive:false});
+      window.addEventListener('touchcancel',(e)=>endDrag(e), {passive:false});
     }
 
-    // Keyboard quick-feed
     bowl.addEventListener('keydown', (e)=>{
-      if(e.key==='Enter' || e.key===' '){
-        e.preventDefault(); bumpScore('feed',2); flashTongue();
-      }
+      if(e.key==='Enter' || e.key===' '){ e.preventDefault(); bumpScore('feed',2); flashTongue(); }
     });
   })();
 
-  // --- PLAY (throw ball) ---
+  // PLAY (throw ball)
   (function initBall(){
     const ball = els.ball;
     const home = {x:0,y:0};
     ball.style.transform = `translate(${home.x}px, ${home.y}px)`;
-
     function throwBall(){
       const target = els.hit.getBoundingClientRect();
-      const ballRect = ball.getBoundingClientRect();
-
-      const tx = (target.left + target.width/2) - (ballRect.left + ballRect.width/2);
-      const ty = (target.top + target.height/2) - (ballRect.top + ballRect.height/2);
-
+      const r = ball.getBoundingClientRect();
+      const tx = (target.left + target.width/2) - (r.left + r.width/2);
+      const ty = (target.top + target.height/2) - (r.top + r.height/2);
       const keyframes = [
         { transform: `translate(${home.x}px, ${home.y}px)` },
         { offset:.5, transform: `translate(${home.x + tx*0.5}px, ${home.y + ty*0.5 - 120}px)` },
@@ -612,58 +555,49 @@
     ball.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); throwBall(); }});
   })();
 
-  // --- PET (hearts) ---
+  // PET (hearts)
   function spawnHeartsToward(n=6){
     const btnRect = els.heartBtn.getBoundingClientRect();
     const target = els.hit.getBoundingClientRect();
-
     for(let i=0;i<n;i++){
       const h = document.createElement('div');
-      h.className='float';
-      h.style.pointerEvents='none';
+      h.className='float'; h.style.pointerEvents='none';
       h.innerHTML = `<svg viewBox="0 0 24 22" width="24" height="22" aria-hidden="true">
         <path d="M12 21 C 3 13,1 9,4 6 C 7 3,11 5,12 8 C 13 5,17 3,20 6 C 23 9,21 13,12 21 Z" fill="#ff5fa2"/>
       </svg>`;
       document.body.appendChild(h);
-      const startX = btnRect.left + btnRect.width/2 + rand(-30,30);
-      const startY = btnRect.top + rand(-10,10);
-      const endX = target.left + target.width/2 + rand(-10,10);
-      const endY = target.top + target.height/2 + rand(-10,10);
-
-      const ctrlX = (startX+endX)/2 + rand(-80,80);
-      const ctrlY = Math.min(startY,endY) - rand(60,140);
-
-      const dur = rand(600, 900);
-      let t0 = null;
+      const sx = btnRect.left + btnRect.width/2 + (Math.random()*60-30);
+      const sy = btnRect.top + (Math.random()*20-10);
+      const ex = target.left + target.width/2 + (Math.random()*20-10);
+      const ey = target.top + target.height/2 + (Math.random()*20-10);
+      const cx = (sx+ex)/2 + (Math.random()*160-80);
+      const cy = Math.min(sy,ey) - (60+Math.random()*80);
+      const dur = 600 + Math.random()*300;
+      let t0=null;
       function step(t){
-        if(!t0) t0 = t;
-        const p = Math.min(1, (t - t0)/dur);
-        const x = (1-p)*(1-p)*startX + 2*(1-p)*p*ctrlX + p*p*endX;
-        const y = (1-p)*(1-p)*startY + 2*(1-p)*p*ctrlY + p*p*endY;
-        h.style.transform = `translate(${x}px, ${y}px) scale(${0.7 + p*0.5}) rotate(${(p*180)|0}deg)`;
-        if(p<1) requestAnimationFrame(step); else { h.remove(); }
+        if(!t0) t0=t;
+        const p=Math.min(1,(t-t0)/dur);
+        const x=(1-p)*(1-p)*sx + 2*(1-p)*p*cx + p*p*ex;
+        const y=(1-p)*(1-p)*sy + 2*(1-p)*p*cy + p*p*ey;
+        h.style.transform=`translate(${x}px, ${y}px) scale(${0.7+p*0.5}) rotate(${(p*180)|0}deg)`;
+        if(p<1) requestAnimationFrame(step); else h.remove();
       }
       requestAnimationFrame(step);
     }
   }
-  els.heartBtn.addEventListener('click', ()=>{ bumpScore('pet',2); });
+  els.heartBtn.addEventListener('click', ()=>bumpScore('pet',2));
 
-  // Kick off decay loops
+  // Start decays & set initial mood
   ['feed','play','pet'].forEach(scheduleDecay);
-
-  // Initial mood
   updateBars();
 
-  // Bonus: clicking stage gives a little petting burst
+  // Bonus tap on stage to pet
   els.stage.addEventListener('click', (e)=>{
     const path = e.composedPath ? e.composedPath() : [];
     if(path.includes(els.bowl) || path.includes(els.ball) || path.includes(els.heartBtn)) return;
     const t = els.hit.getBoundingClientRect();
-    if(e.clientY >= t.top-80 && e.clientY <= t.bottom+80){
-      bumpScore('pet',1);
-    }
+    if(e.clientY >= t.top-80 && e.clientY <= t.bottom+80){ bumpScore('pet',1); }
   });
-
 })();
 </script>
 </body>
