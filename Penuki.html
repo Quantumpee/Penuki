@@ -125,9 +125,7 @@
     background: linear-gradient(180deg, #ffffff, #fff8);
     border-top:1px solid #00000010;
     display:grid; gap:14px;
-
-    /* NEW: contain scroll to avoid page jitter while dragging */
-    overscroll-behavior: contain;
+    overscroll-behavior: contain; /* keep scroll from stealing drags */
   }
   .pad-grid{
     display:grid; gap:14px;
@@ -144,7 +142,7 @@
 
   /* Draggables / Clickables */
   .bowl, .ball, .heart-btn{
-    user-select:none; touch-action:none; cursor:grab;
+    user-select:none; -webkit-user-drag:none; touch-action:none; cursor:grab;
     transition: transform .15s ease;
   }
   .ball, .heart-btn{ cursor:pointer }
@@ -152,8 +150,13 @@
   .returning{ transition: transform .5s cubic-bezier(.16,1,.3,1); }
   .float{ position:absolute; left:0; top:0; will-change:transform }
 
-  /* NEW: keep the bowl above while dragging */
-  .bowl.dragging { z-index: 10000; }
+  /* While dragging, move the bowl in the viewport coordinate space */
+  .bowl.drag-follow {
+    position: fixed !important; /* follow finger reliably on mobile */
+    left: 0; top: 0;
+    transform: translate(0,0) !important;
+    z-index: 10000;
+  }
 
   .woof{
     position:absolute; top:8%; left:58%;
@@ -298,7 +301,7 @@
       <!-- FEED -->
       <div class="pad" id="feedPad">
         <h3>🍪 Feed</h3>
-        <div class="hint">Drag the bowl to the puppy.</div>
+        <div class="hint">Press the bowl, slide it to the puppy’s face, or just tap the bowl for a quick snack.</div>
         <div class="playground">
           <div class="bowl float" id="bowl" role="button" aria-label="Bowl of treats; drag to feed" tabindex="0" style="transform:translate(0px,0px)">
             <svg viewBox="0 0 140 90" width="120" height="78" aria-hidden="true">
@@ -328,7 +331,7 @@
       <!-- PLAY -->
       <div class="pad" id="playPad">
         <h3>🎾 Play</h3>
-        <div class="hint">Click the ball to throw it.</div>
+        <div class="hint">Tap the ball to throw it.</div>
         <div class="playground">
           <div class="ball float" id="ball" role="button" aria-label="Throw tennis ball" tabindex="0">
             <svg viewBox="0 0 90 90" width="80" height="80" aria-hidden="true">
@@ -366,8 +369,8 @@
       </div>
     </div>
     <p class="sr-only" id="instructions">
-      Keep feed, play, and pet scores high. Each slowly ticks down at random times. Drag the bowl onto the puppy to feed.
-      Click the tennis ball to throw it. Click the hearts to give affection.
+      Keep feed, play, and pet scores high. Each slowly ticks down at random times. Drag the bowl onto the puppy to feed
+      (press and slide). A quick tap on the bowl also feeds. Tap the ball to throw it. Tap the hearts to give affection.
     </p>
   </section>
 </div>
@@ -478,91 +481,100 @@
     woofTimer = setTimeout(()=>{ els.woof.style.transform='scale(0) rotate(-8deg)'; }, 600);
   }
 
-  // --- FEED (drag bowl) ---  [UPDATED: mobile-friendly drag with pointer capture + scroll prevention]
+  // Utility for coords + scroll-safe preventDefault
+  const getXY = (e) => {
+    if (e.touches && e.touches.length) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    return { x: e.clientX, y: e.clientY };
+  };
+  const safePrevent = (e) => {
+    // only prevent if it can be prevented (iOS passive listeners)
+    if (e && e.cancelable) e.preventDefault();
+  };
+
+  // --- FEED (drag bowl) --- robust mobile version
   (function initBowl(){
     const bowl = els.bowl;
-    const home = {x:0, y:0};
+    const hit = els.hit;
+    const homeTransform = 'translate(0px, 0px)';
     let dragging = false;
-    let startOffset = {x:0, y:0};   // offset inside bowl when grabbed
-    let startXY = {x:0, y:0};       // for tap fallback
-    const container = bowl.offsetParent || document.body;
+    let startOffset = {x:0,y:0}; // where inside the bowl the finger is
+    let startXY = {x:0,y:0};     // to detect tap vs drag
 
-    function setPos(x,y, withReturn=false){
-      bowl.classList.toggle('returning', withReturn);
-      bowl.style.transform = `translate(${x}px, ${y}px)`;
+    function placeAtViewport(x, y){
+      bowl.style.left = (x - startOffset.x) + 'px';
+      bowl.style.top  = (y - startOffset.y) + 'px';
     }
 
-    function getXY(e){
-      if (e.touches && e.touches.length) {
-        return { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      }
-      return { x: e.clientX, y: e.clientY };
-    }
-
-    function onPointerDown(e){
+    function beginDrag(e){
       dragging = true;
-      bowl.classList.add('dragging');
+      bowl.classList.add('dragging','drag-follow');
       bowl.classList.remove('returning');
-      try { e.pointerId != null && bowl.setPointerCapture(e.pointerId); } catch {}
       const rect = bowl.getBoundingClientRect();
-      const cRect = container.getBoundingClientRect();
       const p = getXY(e);
-
       startOffset.x = p.x - rect.left;
       startOffset.y = p.y - rect.top;
-      startXY = {x: p.x, y: p.y};
-
-      window.addEventListener('pointermove', onMove, {passive:false});
-      window.addEventListener('pointerup', onUp, {once:true});
-      window.addEventListener('pointercancel', onUp, {once:true});
-
-      const nx = p.x - startOffset.x - cRect.left;
-      const ny = p.y - startOffset.y - cRect.top;
-      setPos(nx, ny);
-      e.preventDefault();
+      startXY = {x:p.x, y:p.y};
+      placeAtViewport(p.x, p.y);
     }
 
-    function onMove(e){
+    function moveDrag(e){
       if(!dragging) return;
-      // prevent page scroll while dragging (iOS Safari needs passive:false)
-      e.preventDefault();
-
+      safePrevent(e); // stop page from scrolling
       const p = getXY(e);
-      const cRect = container.getBoundingClientRect();
-      const nx = p.x - startOffset.x - cRect.left;
-      const ny = p.y - startOffset.y - cRect.top;
-      setPos(nx, ny);
+      placeAtViewport(p.x, p.y);
     }
 
-    function hitPuppy(){
+    function overPuppy(){
       const bowlRect = bowl.getBoundingClientRect();
-      const targetRect = els.hit.getBoundingClientRect();
+      const targetRect = hit.getBoundingClientRect();
       return !(bowlRect.right < targetRect.left ||
                bowlRect.left  > targetRect.right ||
                bowlRect.bottom< targetRect.top ||
                bowlRect.top   > targetRect.bottom);
     }
 
-    function onUp(e){
-      try { e.pointerId != null && bowl.releasePointerCapture(e.pointerId); } catch {}
-      const end = getXY(e);
-      const dist = Math.hypot(end.x - startXY.x, end.y - startXY.y);
+    function endDrag(e){
+      const p = getXY(e);
+      const dist = Math.hypot(p.x - startXY.x, p.y - startXY.y);
       const quickTap = dist < 12;
 
+      bowl.classList.remove('drag-follow','dragging');
       dragging = false;
-      bowl.classList.remove('dragging');
-      if(hitPuppy() || quickTap){
-        bumpScore('feed', 2);
-        flashTongue();
+
+      if (overPuppy() || quickTap){
+        bumpScore('feed',2); flashTongue();
       }
-
-      setPos(home.x, home.y, true);
+      // snap home
+      bowl.classList.add('returning');
+      bowl.style.left = ''; bowl.style.top = '';
+      bowl.style.transform = homeTransform;
       setTimeout(()=>bowl.classList.remove('returning'), 520);
-
-      window.removeEventListener('pointermove', onMove);
     }
 
-    bowl.addEventListener('pointerdown', onPointerDown, {passive:false});
+    // Pointer Events path
+    const hasPointer = 'PointerEvent' in window;
+    if (hasPointer){
+      const onPointerDown = (e)=>{ if(e.button!==0 && e.pointerType!=='touch') return; safePrevent(e); try{ bowl.setPointerCapture(e.pointerId); }catch{} beginDrag(e); };
+      const onPointerMove = (e)=>{ moveDrag(e); };
+      const onPointerUp   = (e)=>{ try{ bowl.releasePointerCapture(e.pointerId); }catch{} endDrag(e); };
+
+      bowl.addEventListener('pointerdown', onPointerDown, {passive:false});
+      window.addEventListener('pointermove', onPointerMove, {passive:false});
+      window.addEventListener('pointerup',   onPointerUp,   {passive:false});
+      window.addEventListener('pointercancel', onPointerUp, {passive:false});
+    } else {
+      // Touch fallback (older iOS/embedded browsers)
+      const onTouchStart = (e)=>{ safePrevent(e); beginDrag(e); };
+      const onTouchMove  = (e)=>{ moveDrag(e); };
+      const onTouchEnd   = (e)=>{ endDrag(e); };
+
+      bowl.addEventListener('touchstart', onTouchStart, {passive:false});
+      window.addEventListener('touchmove', onTouchMove, {passive:false});
+      window.addEventListener('touchend', onTouchEnd, {passive:false});
+      window.addEventListener('touchcancel', onTouchEnd, {passive:false});
+    }
+
+    // Keyboard quick-feed
     bowl.addEventListener('keydown', (e)=>{
       if(e.key==='Enter' || e.key===' '){
         e.preventDefault(); bumpScore('feed',2); flashTongue();
