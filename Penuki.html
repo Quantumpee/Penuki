@@ -125,6 +125,9 @@
     background: linear-gradient(180deg, #ffffff, #fff8);
     border-top:1px solid #00000010;
     display:grid; gap:14px;
+
+    /* NEW: contain scroll to avoid page jitter while dragging */
+    overscroll-behavior: contain;
   }
   .pad-grid{
     display:grid; gap:14px;
@@ -148,6 +151,9 @@
   .dragging{ cursor:grabbing; transform: scale(1.06); }
   .returning{ transition: transform .5s cubic-bezier(.16,1,.3,1); }
   .float{ position:absolute; left:0; top:0; will-change:transform }
+
+  /* NEW: keep the bowl above while dragging */
+  .bowl.dragging { z-index: 10000; }
 
   .woof{
     position:absolute; top:8%; left:58%;
@@ -397,8 +403,6 @@
       const c = els[key];
       c.querySelector('.num').textContent = String(val);
       c.querySelector('.fill').style.setProperty('--p', val*10);
-      const bar = c.querySelector('.fill');
-      // Also reflect color state via aria-label for assistive tech
       c.setAttribute('aria-label', `${key==='avg'?'Happiness':key} score ${val} out of 10`);
     };
     set('feed', scores.feed);
@@ -411,7 +415,6 @@
   }
 
   function applyMood(m){ // m: 0..1
-    // Mouth
     if(m>0.66){
       els.mouthHappy.setAttribute('opacity','1');
       els.mouthNeutral.setAttribute('opacity','0');
@@ -426,29 +429,24 @@
       els.mouthSad.setAttribute('opacity','1');
     }
 
-    // Eye sparkle size
     const sparkle = clamp(2, 2 + m*3.5, 5.5);
     document.querySelectorAll('#eyeL circle:nth-child(2), #eyeR circle:nth-child(2)')
       .forEach(s=>s.setAttribute('r', sparkle.toFixed(1)));
 
-    // Ear droop
     const earL = els.puppy.querySelector('ellipse[cx="130"]');
     const earR = els.puppy.querySelector('ellipse[cx="270"]');
-    const droop = (1-m)*20; // degrees
+    const droop = (1-m)*20;
     earL.setAttribute('transform', `rotate(${-18 - droop} 130 85)`);
     earR.setAttribute('transform', `rotate(${18 + droop} 270 85)`);
 
-    // Tail wag speed
-    const speed = clamp(.25, 1.2 - m, 1.2); // faster when happy
+    const speed = clamp(.25, 1.2 - m, 1.2);
     els.tail.style.setProperty('--wag', `${speed.toFixed(2)}s`);
 
-    // Tint & global vibe
     els.moodTint.style.opacity = (1-m)*0.35;
   }
 
   function bumpScore(key, amount=2){
     scores[key] = clamp(0, scores[key] + amount, 10);
-    // small celebration
     if(key==='feed'){ flashTongue(); }
     if(key==='play'){ bark(); }
     if(key==='pet'){ spawnHeartsToward(3); }
@@ -480,69 +478,111 @@
     woofTimer = setTimeout(()=>{ els.woof.style.transform='scale(0) rotate(-8deg)'; }, 600);
   }
 
-  // --- FEED (drag bowl) ---
+  // --- FEED (drag bowl) ---  [UPDATED: mobile-friendly drag with pointer capture + scroll prevention]
   (function initBowl(){
     const bowl = els.bowl;
-    const origin = {x:0, y:0};
-    let startX=0,startY=0, dragging=false, current={x:0,y:0};
+    const home = {x:0, y:0};
+    let dragging = false;
+    let startOffset = {x:0, y:0};   // offset inside bowl when grabbed
+    let startXY = {x:0, y:0};       // for tap fallback
+    const container = bowl.offsetParent || document.body;
+
     function setPos(x,y, withReturn=false){
-      current.x=x; current.y=y;
       bowl.classList.toggle('returning', withReturn);
       bowl.style.transform = `translate(${x}px, ${y}px)`;
     }
-    function onPointerDown(e){
-      dragging=true; bowl.classList.add('dragging'); bowl.classList.remove('returning');
-      const rect = bowl.getBoundingClientRect();
-      startX = (e.clientX|| (e.touches&&e.touches[0].clientX)) - rect.left;
-      startY = (e.clientY|| (e.touches&&e.touches[0].clientY)) - rect.top;
-      window.addEventListener('pointermove', onMove);
-      window.addEventListener('pointerup', onUp, {once:true});
+
+    function getXY(e){
+      if (e.touches && e.touches.length) {
+        return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      }
+      return { x: e.clientX, y: e.clientY };
     }
+
+    function onPointerDown(e){
+      dragging = true;
+      bowl.classList.add('dragging');
+      bowl.classList.remove('returning');
+      try { e.pointerId != null && bowl.setPointerCapture(e.pointerId); } catch {}
+      const rect = bowl.getBoundingClientRect();
+      const cRect = container.getBoundingClientRect();
+      const p = getXY(e);
+
+      startOffset.x = p.x - rect.left;
+      startOffset.y = p.y - rect.top;
+      startXY = {x: p.x, y: p.y};
+
+      window.addEventListener('pointermove', onMove, {passive:false});
+      window.addEventListener('pointerup', onUp, {once:true});
+      window.addEventListener('pointercancel', onUp, {once:true});
+
+      const nx = p.x - startOffset.x - cRect.left;
+      const ny = p.y - startOffset.y - cRect.top;
+      setPos(nx, ny);
+      e.preventDefault();
+    }
+
     function onMove(e){
       if(!dragging) return;
-      const x = (e.clientX) - bowl.getBoundingClientRect().width/2;
-      const y = (e.clientY) - bowl.getBoundingClientRect().height/2;
-      setPos(x - origin.x, y - origin.y);
+      // prevent page scroll while dragging (iOS Safari needs passive:false)
+      e.preventDefault();
+
+      const p = getXY(e);
+      const cRect = container.getBoundingClientRect();
+      const nx = p.x - startOffset.x - cRect.left;
+      const ny = p.y - startOffset.y - cRect.top;
+      setPos(nx, ny);
     }
+
     function hitPuppy(){
       const bowlRect = bowl.getBoundingClientRect();
       const targetRect = els.hit.getBoundingClientRect();
-      // simple rect overlap test
-      return !(bowlRect.right < targetRect.left || bowlRect.left > targetRect.right ||
-               bowlRect.bottom < targetRect.top || bowlRect.top > targetRect.bottom);
+      return !(bowlRect.right < targetRect.left ||
+               bowlRect.left  > targetRect.right ||
+               bowlRect.bottom< targetRect.top ||
+               bowlRect.top   > targetRect.bottom);
     }
-    function onUp(){
-      dragging=false; bowl.classList.remove('dragging');
-      if(hitPuppy()){ bumpScore('feed', 2); flashTongue(); }
-      // snap back
-      setPos(0,0,true);
+
+    function onUp(e){
+      try { e.pointerId != null && bowl.releasePointerCapture(e.pointerId); } catch {}
+      const end = getXY(e);
+      const dist = Math.hypot(end.x - startXY.x, end.y - startXY.y);
+      const quickTap = dist < 12;
+
+      dragging = false;
+      bowl.classList.remove('dragging');
+      if(hitPuppy() || quickTap){
+        bumpScore('feed', 2);
+        flashTongue();
+      }
+
+      setPos(home.x, home.y, true);
       setTimeout(()=>bowl.classList.remove('returning'), 520);
+
       window.removeEventListener('pointermove', onMove);
     }
-    bowl.addEventListener('pointerdown', onPointerDown);
-    bowl.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ // keyboard quick-feed
-      e.preventDefault(); bumpScore('feed',2); flashTongue();
-    }});
+
+    bowl.addEventListener('pointerdown', onPointerDown, {passive:false});
+    bowl.addEventListener('keydown', (e)=>{
+      if(e.key==='Enter' || e.key===' '){
+        e.preventDefault(); bumpScore('feed',2); flashTongue();
+      }
+    });
   })();
 
   // --- PLAY (throw ball) ---
   (function initBall(){
     const ball = els.ball;
     const home = {x:0,y:0};
-    // place ball nicely centered within its playground
     ball.style.transform = `translate(${home.x}px, ${home.y}px)`;
 
     function throwBall(){
-      // compute target (toward head center)
       const target = els.hit.getBoundingClientRect();
-      const stage = document.body.getBoundingClientRect();
       const ballRect = ball.getBoundingClientRect();
 
-      // delta to target center
       const tx = (target.left + target.width/2) - (ballRect.left + ballRect.width/2);
       const ty = (target.top + target.height/2) - (ballRect.top + ballRect.height/2);
 
-      // animate with a little arc using WAAPI
       const keyframes = [
         { transform: `translate(${home.x}px, ${home.y}px)` },
         { offset:.5, transform: `translate(${home.x + tx*0.5}px, ${home.y + ty*0.5 - 120}px)` },
@@ -551,7 +591,6 @@
       const anim = ball.animate(keyframes, { duration: 650, easing: 'cubic-bezier(.16,1,.3,1)' });
       anim.onfinish = ()=>{
         bumpScore('play',2);
-        // return
         ball.classList.add('returning');
         ball.style.transform = `translate(${home.x}px, ${home.y}px)`;
         setTimeout(()=>ball.classList.remove('returning'), 520);
@@ -563,7 +602,6 @@
 
   // --- PET (hearts) ---
   function spawnHeartsToward(n=6){
-    // start from heart button area, fly to hit target
     const btnRect = els.heartBtn.getBoundingClientRect();
     const target = els.hit.getBoundingClientRect();
 
@@ -583,13 +621,11 @@
       const ctrlX = (startX+endX)/2 + rand(-80,80);
       const ctrlY = Math.min(startY,endY) - rand(60,140);
 
-      // position via WAAPI custom function
       const dur = rand(600, 900);
       let t0 = null;
       function step(t){
         if(!t0) t0 = t;
         const p = Math.min(1, (t - t0)/dur);
-        // quadratic Bezier
         const x = (1-p)*(1-p)*startX + 2*(1-p)*p*ctrlX + p*p*endX;
         const y = (1-p)*(1-p)*startY + 2*(1-p)*p*ctrlY + p*p*endY;
         h.style.transform = `translate(${x}px, ${y}px) scale(${0.7 + p*0.5}) rotate(${(p*180)|0}deg)`;
@@ -608,18 +644,13 @@
 
   // Bonus: clicking stage gives a little petting burst
   els.stage.addEventListener('click', (e)=>{
-    // ignore clicks originating from controls/draggables
     const path = e.composedPath ? e.composedPath() : [];
     if(path.includes(els.bowl) || path.includes(els.ball) || path.includes(els.heartBtn)) return;
-    // only if near hit target
     const t = els.hit.getBoundingClientRect();
     if(e.clientY >= t.top-80 && e.clientY <= t.bottom+80){
       bumpScore('pet',1);
     }
   });
-
-  // Resize reaction (optional visual polish)
-  window.addEventListener('resize', ()=>{ /* layout auto-adjusts via CSS */ });
 
 })();
 </script>
